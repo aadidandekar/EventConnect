@@ -31,7 +31,7 @@
         label {
             margin-top: 10px;
         }
-        input {
+        input, select {
             padding: 8px;
             margin-top: 5px;
             border: none;
@@ -81,14 +81,15 @@
                 const roll = document.getElementById("roll").value;
                 const email = document.getElementById("email").value;
                 const phone = document.getElementById("phone").value;
+                const stall = document.getElementById("stall").value;
 
                 if (!roll) {
                     alert("Roll number is required.");
                     return;
                 }
 
-                const entryData = { name, email, phone };
-                set(ref(db, `visitors/stall_1/${roll}`), entryData)
+                const entryData = { name, email, phone, stall };
+                set(ref(db, `visitors/${stall}/${roll}`), entryData)
                     .then(() => alert("Data uploaded successfully!"))
                     .catch(error => alert("Error: " + error.message));
             });
@@ -110,6 +111,14 @@
 
         <label for="phone">Phone:</label>
         <input type="tel" id="phone" required>
+
+        <label for="stall">Select Stall:</label>
+        <select id="stall" required>
+            <option value="stall_1">Stall 1</option>
+            <option value="stall_2">Stall 2</option>
+            <option value="stall_3">Stall 3</option>
+            <option value="stall_4">Stall 4</option>
+        </select>
 
         <button type="submit">Submit</button>
     </form>
