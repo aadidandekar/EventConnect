@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EventConnect</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -56,7 +57,6 @@
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-analytics.js";
         import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
         const firebaseConfig = {
@@ -71,34 +71,83 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
         const db = getDatabase(app);
 
         document.addEventListener("DOMContentLoaded", function() {
             document.getElementById("entryForm").addEventListener("submit", function(event) {
                 event.preventDefault();
-                const name = document.getElementById("name").value;
-                const roll = document.getElementById("roll").value;
-                const email = document.getElementById("email").value;
-                const phone = document.getElementById("phone").value;
-                const stall = document.getElementById("stall").value;
+                uploadData();
+            });
 
-                if (!roll) {
-                    alert("Roll number is required.");
-                    return;
-                }
-
-                const entryData = { name, email, phone, stall };
-                set(ref(db, `visitors/${stall}/${roll}`), entryData)
-                    .then(() => alert("Data uploaded successfully!"))
-                    .catch(error => alert("Error: " + error.message));
+            document.getElementById("qrUpload").addEventListener("change", function(event) {
+                decodeQR(event);
             });
         });
+
+        function uploadData() {
+            const name = document.getElementById("name").value;
+            const roll = document.getElementById("roll").value;
+            const email = document.getElementById("email").value;
+            const phone = document.getElementById("phone").value;
+            const stall = document.getElementById("stall").value;
+
+            if (!roll) {
+                alert("Roll number is required.");
+                return;
+            }
+
+            const entryData = { name, email, phone, stall };
+
+            set(ref(db, `visitors/${stall}/${roll}`), entryData)
+                .then(() => alert("Data uploaded successfully!"))
+                .catch(error => alert("Error: " + error.message));
+        }
+
+        function decodeQR(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function() {
+                const img = new Image();
+                img.src = reader.result;
+                img.onload = function() {
+                    const canvas = document.createElement("canvas");
+                    const ctx = canvas.getContext("2d");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0, img.width, img.height);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, canvas.width, canvas.height);
+                    if (code) {
+                        try {
+                            const qrData = JSON.parse(code.data);
+                            document.getElementById("name").value = qrData.name || "";
+                            document.getElementById("roll").value = qrData.roll || "";
+                            document.getElementById("email").value = qrData.email || "";
+                            document.getElementById("phone").value = qrData.phone || "";
+                            document.getElementById("stall").value = qrData.stall || "stall_1";
+                            alert("QR Code scanned successfully!");
+                            uploadData();
+                        } catch (error) {
+                            alert("Invalid QR Code format.");
+                        }
+                    } else {
+                        alert("QR Code not detected.");
+                    }
+                };
+            };
+            reader.readAsDataURL(file);
+        }
     </script>
 </head>
 <body>
     <h1>EventConnect</h1>
     <h2>Enter Visitor Details</h2>
+
+    <label for="qrUpload">Upload QR Code:</label>
+    <input type="file" id="qrUpload" accept="image/*">
+    <br>
     <form id="entryForm">
         <label for="name">Name:</label>
         <input type="text" id="name" required>
